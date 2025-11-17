@@ -1,0 +1,35 @@
+{
+	"name": "reperform",
+	"private": true,
+	"version": "0.0.1",
+	"type": "module",
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"preview": "vite preview",
+		"prepare": "svelte-kit sync || echo ''",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
+	},
+	"devDependencies": {
+		"@sveltejs/adapter-auto": "^6.1.1",
+		"@sveltejs/kit": "^2.48.4",
+		"@sveltejs/vite-plugin-svelte": "^6.2.1",
+		"svelte": "^5.43.3",
+		"svelte-check": "^4.3.3",
+		"typescript": "^5.9.3",
+		"vite": "^7.1.12"
+	},
+	"dependencies": {
+		"@supabase/supabase-js": "^2.78.0",
+		"@types/xhook": "^1.5.3",
+		"@uppy/core": "^5.1.1",
+		"@uppy/dashboard": "^5.0.4",
+		"@uppy/tus": "^5.0.2",
+		"konva": "^10.0.8",
+		"svelte-audio-waveform": "^0.0.5",
+		"svelte-awesome-slider": "^2.0.0",
+		"webaudio-peaks": "^1.0.0",
+		"xhook": "^1.6.2"
+	}
+}
