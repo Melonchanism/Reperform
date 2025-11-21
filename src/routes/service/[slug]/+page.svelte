@@ -105,7 +105,9 @@
 	function getLevel01(analyser: AnalyserNode) {
 		const buf = new Float32Array(analyser.fftSize);
 		analyser.getFloatTimeDomainData(buf);
-		return Math.sqrt(Math.abs(buf.reduce((a, b) => a + b ** 2)) / buf.length);
+		// Old volume function, didn't calculate clip
+		// return buf.reduce((a, b) => a + Math.abs(b)) / buf.length;
+		return buf.reduce((a, b) => (b > a ? b : a));
 	}
 
 	function updateLoop() {
@@ -199,8 +201,8 @@
 						<Slider
 							--track-width="140px"
 							--track-height="20px"
-							--volume-width={`${track.currentLoudness * 160}px`}
-							--track-background="linear-gradient(90deg,  transparent, var(--volume-width), hsl(0, 0%, 30%) var(--volume-width)), linear-gradient(90deg, hsl(119, 100%, 30%), 66%,  hsl(41, 100%, 50%), 90%, hsl(0, 100%, 30%))"
+							--volume-width={`${track.currentLoudness * 100}%`}
+							--track-background="linear-gradient(90deg,  transparent, var(--volume-width), hsl(0, 0%, 30%) var(--volume-width)), linear-gradient(90deg, hsl(119, 100%, 30%), 66%,  hsl(41, 100%, 50%), 98%, hsl(0, 100%, 30%))"
 							--thumb-background="hsl(0, 0%, 50%)"
 							--margin-block="0"
 							min={-18}
@@ -208,7 +210,9 @@
 							step={1}
 							bind:value={track.gainDB}
 						/>
-						<p>{track.gainDB}dB</p>
+						<p style:color={track.currentLoudness > 0.99 ? "red" : "green"}>
+							{track.gainDB}dB
+						</p>
 					</div>
 				</div>
 			{/each}
