@@ -219,6 +219,7 @@
 		</div>
 		<div class="waveforms">
 			<div class="playhead"></div>
+			<div class="progress"></div>
 			{#each tracks as track}
 				<!-- svelte-ignore a11y_no_static_element_interactions -->
 				<div
@@ -267,8 +268,6 @@
 		left: -1px;
 		height: max-content;
 		.headers {
-			display: flex;
-			flex-direction: column;
 			& > * {
 				display: grid;
 				align-content: center;
@@ -292,8 +291,10 @@
 
 		.waveforms {
 			position: relative;
+			overflow-x: scroll;
 			& > * {
 				border-bottom: 1px inset hsl(0, 0%, 15%);
+				width: fit-content;
 				&:last-child {
 					border-bottom: none !important;
 				}
@@ -320,11 +321,13 @@
 					rotate: 180deg;
 				}
 			}
-			background: linear-gradient(
-				90deg,
-				hsla(0, 0%, 20%, 20%) var(--pos),
-				transparent var(--pos)
-			);
+			.progress {
+				top: 0;
+				height: 100%;
+				position: absolute;
+				width: var(--pos);
+				background: hsla(0, 0%, 20%, 20%);
+			}
 		}
 
 		.headers > *,
