@@ -37,8 +37,9 @@
 <style>
   .page {
     .list {
-      display: grid;
-      /*gap: 8px;*/
+      display: flex;
+      flex-direction: column-reverse;
+      gap: 8px;
       position: relative;
       margin-bottom: 8px;
       .list {
@@ -64,16 +65,9 @@
         margin-top: 0;
         margin-bottom: 0;
         padding: 0 16px;
+        border-radius: var(--border-radius);
         & > img {
           padding-right: 16px;
-        }
-        &:first-child {
-          border-top-left-radius: var(--border-radius);
-          border-top-right-radius: var(--border-radius);
-        }
-        &:last-child {
-          border-bottom-left-radius: var(--border-radius);
-          border-bottom-right-radius: var(--border-radius);
         }
       }
     }

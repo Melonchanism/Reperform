@@ -1,296 +1,336 @@
 <script lang="ts">
-  import { onMount } from "svelte";
-  import type { PageProps } from "./$types";
-  import AudioWaveform from "svelte-audio-waveform";
-  import { getPeaks } from "$lib/utils";
-  import { Slider } from "svelte-awesome-slider";
+	import { onMount } from "svelte";
+	import type { PageProps } from "./$types";
+	import AudioWaveform from "$lib/AudioWaveform/AudioWaveform.svelte";
+	import { getPeaks } from "$lib/AudioWaveform/utils";
+	import Slider from "$lib/Svelte-Awesome-Slider.svelte";
 
-  let { data }: PageProps = $props();
+	let { data }: PageProps = $props();
 
-  let playing = $state(false);
-  let playstart = $state(0);
-  let pos = $state(0);
-  let duration = $state(1);
-  let pixelRatio = $state(1);
-  let pospct = $derived(pos / duration / pixelRatio);
+	let playing = $state(false);
+	let fullyLoaded = $state(false);
+	let pos = $state(0);
+	let playStart = $state(0);
+	let duration = $state(1);
+	let pospct = $derived((pos / duration) * 100);
 
-  let zoom = $state(1);
+	let zoom = $state(1);
 
-  $effect(() => {
-    zoom;
-    pixelRatio = window.devicePixelRatio ?? 1;
-  });
+	let mouseDown = $state(false);
 
-  let fullyLoaded = $state(false);
+	let audioCtx: AudioContext;
+	let tracks: LoadedTrack[] = $state([]);
 
-  let mouseDown = $state(false);
+	class LoadedTrack {
+		details: {
+			name: string;
+			url: string;
+		};
+		playing = false;
+		readyState?: number = $state();
+		ready = $derived(this.readyState == 4);
+		context: AudioContext;
+		data?: AudioBuffer;
+		source?: AudioBufferSourceNode;
+		peaks?: number[] = $state([]);
+		blob?: string = $state();
+		mute = $state(false);
+		solo = $state(false);
+		gainNode?: GainNode;
+		gainDB = $state(0);
+		gain: number = $derived(
+			this.mute || (!this.solo && tracks.find((track) => track.solo))
+				? 0
+				: 10 ** (this.gainDB / 20)
+		);
+		analyserNode?: AnalyserNode;
+		currentLoudness: number = $state(0);
 
-  let audioCtx: AudioContext;
-  let tracks: LoadedTrack[] = $state([]);
-  class LoadedTrack {
-    details: {
-      name: string;
-      url: string;
-    };
-    playing = false;
-    ready = false;
-    context: AudioContext;
-    data?: AudioBuffer;
-    peaks?: number[];
-    element?: HTMLAudioElement;
-    source?: AudioBufferSourceNode;
-    gainNode?: GainNode;
-    gain = $state(1);
-    mute = $state(false);
-    solo = $state(false);
-    sourceTarget?: AudioNode;
+		constructor(track: { name: string; url: string }, context: AudioContext) {
+			this.details = track;
+			this.context = context;
+			this.gainNode = audioCtx.createGain();
+			this.analyserNode = audioCtx.createAnalyser();
+			this.gainNode.connect(this.analyserNode);
+			this.analyserNode.connect(audioCtx.destination);
+			$effect.root(() => {
+				$effect(() => {
+					if (this.gainNode) this.gainNode.gain.value = this.gain;
+				});
+			});
+		}
 
-    constructor(track: { name: string; url: string }, context: AudioContext) {
-      this.details = track;
-      this.context = context;
-      this.gainNode = audioCtx.createGain();
-      this.gainNode.gain.setValueAtTime(4, audioCtx.currentTime);
-      this.sourceTarget = this.gainNode;
-      this.gainNode.connect(audioCtx.destination);
-      $effect.root(() => {
-        $effect(() => {
-          if (this.gainNode)
-            this.gainNode.gain.value =
-              this.mute || (!this.solo && tracks.find((track) => track.solo))
-                ? 0
-                : this.gain;
-        });
-      });
-    }
+		async load(): Promise<this> {
+			let response = await fetch(this.details.url);
+			this.data = await this.context.decodeAudioData(
+				await response.arrayBuffer()
+			);
+			this.peaks = getPeaks(this.data);
+			return new Promise((res) => {
+				res(this);
+			});
+		}
+	}
 
-    async load(): Promise<typeof this> {
-      let response = await fetch(this.details.url);
-      let buffer = await response.arrayBuffer();
-      this.data = await this.context.decodeAudioData(buffer);
-      buffer = response = null;
-      this.peaks = getPeaks(this.data);
-      return new Promise((res) => res(this));
-    }
-  }
+	function prepare() {
+		for (const track of tracks) {
+			track.source = audioCtx.createBufferSource();
+			track.source.buffer = track.data!;
+			track.source.connect(track.gainNode!);
+		}
+	}
 
-  function play() {
-    playing = true;
-    playstart = audioCtx.currentTime - pos;
-    updateLoop();
-    for (const track of tracks) {
-      track.source?.start(0, pos);
-    }
-  }
+	async function play() {
+		playing = true;
+		playStart = audioCtx.currentTime - pos;
+		updateLoop();
+		for (const track of tracks) {
+			track.source?.start(0, pos);
+		}
+	}
 
-  function stop() {
-    playing = false;
-    for (const track of tracks) {
-      track.source?.stop();
-      track.source?.disconnect();
-      track.source = undefined;
-    }
-    prepare();
-  }
+	function stop() {
+		playing = false;
+		for (const track of tracks) {
+			track.source?.stop();
+			track.source?.disconnect();
+			track.source = undefined;
+		}
+		prepare();
+	}
+	function togglePlay() {
+		playing ? stop() : play();
+	}
 
-  function togglePlay() {
-    playing ? stop() : play();
-  }
+	function getLevel01(analyser: AnalyserNode) {
+		const buf = new Float32Array(analyser.fftSize);
+		analyser.getFloatTimeDomainData(buf);
+		return Math.sqrt(Math.abs(buf.reduce((a, b) => a + b ** 2)) / buf.length);
+	}
 
-  function reprepare() {
-    stop();
-    play();
-  }
+	function updateLoop() {
+		if (!mouseDown && playing) {
+			pos = audioCtx.currentTime - playStart;
+			for (const track of tracks)
+				track.currentLoudness = getLevel01(track.analyserNode!);
+			requestAnimationFrame(updateLoop);
+		} else {
+			for (const track of tracks) track.currentLoudness = 0;
+		}
+	}
 
-  function prepare() {
-    for (const track of tracks) {
-      track.source = audioCtx.createBufferSource();
-      track.source.buffer = track.data!;
-      track.source.connect(track.sourceTarget!);
-    }
-  }
+	onMount(() => {
+		if (navigator.audioSession) navigator.audioSession.type = "transient-solo";
+		audioCtx = new AudioContext();
+		(async () => {
+			for (const track of data.tracks)
+				tracks.push(await new LoadedTrack(track, audioCtx).load());
+			prepare();
+			duration =
+				tracks[0].source!.buffer!.length / tracks[0].source!.buffer!.sampleRate;
+		})();
+		fullyLoaded = true;
+		return () => {
+			if (playing) stop();
+			audioCtx.close();
+		};
+	});
 
-  function updateLoop() {
-    if (!mouseDown && playing) {
-      pos = audioCtx.currentTime - playstart;
-      if (pos > duration) {
-        stop();
-        return;
-      }
-      requestAnimationFrame(() => {
-        updateLoop();
-      });
-    }
-  }
+	function updatePlayerPos() {
+		let originalState = playing;
+		stop();
+		if (originalState) play();
+	}
 
-  onMount(() => {
-    pixelRatio = window.devicePixelRatio;
-    audioCtx = new AudioContext();
-    (async () => {
-      for (const track of data.tracks)
-        tracks.push(await new LoadedTrack(track, audioCtx).load());
-      prepare();
-      duration =
-        tracks[0].source?.buffer?.length / tracks[0].source?.buffer?.sampleRate;
-      fullyLoaded = true;
-    })();
-
-    return () => {
-      stop();
-      audioCtx.close();
-    };
-  });
-
-  function handleKey(evt: KeyboardEvent) {
-    console.log(evt.key);
-    switch (evt.key) {
-      case " ":
-        evt.preventDefault();
-        togglePlay();
-        break;
-      case "Enter":
-        break;
-    }
-  }
+	function handleKey(evt: KeyboardEvent) {
+		console.log(evt.key);
+		switch (evt.key) {
+			case " ":
+				evt.preventDefault();
+				togglePlay();
+				break;
+			case "Enter":
+				break;
+		}
+	}
 </script>
 
 <svelte:head>
-  <title>{data.details.name} {data.details.date} | Reperform</title>
+	<title>{data.details.name} {data.details.date} | Reperform</title>
 </svelte:head>
 
 <svelte:window onkeypress={handleKey} onmouseup={() => (mouseDown = false)} />
 
 <div class="page">
-  <div class="header">
-    <h1>{data.details.name}</h1>
-    <h3 style="color: gray">({data.details.date})</h3>
-  </div>
-  <div class="controls">
-    <button onclick={togglePlay}>{playing ? "Pause" : "Play"}</button>
-    <div>
-      <Slider
-        --track-width="360px"
-        --track-height="20px"
-        min={0.1}
-        max={2}
-        step={0.1}
-        bind:value={zoom}
-      />
-      <kbd>{zoom}</kbd>
-    </div>
-  </div>
-  {#if fullyLoaded}
-    <div class="tracks">
-      {#each tracks as track}
-        <div class="trackheader">
-          <p>{track.details.name.split("=").at(-1)?.split(".")[0]}</p>
-          <div class="toggles">
-            <button
-              class={track.solo ? "active" : ""}
-              onclick={() => (track.solo = !track.solo)}>Solo</button
-            >
-            <button
-              class={track.mute ? "active" : ""}
-              onclick={() => (track.mute = !track.mute)}>Mute</button
-            >
-          </div>
-          <Slider
-            --track-width="180px"
-            --track-height="20px"
-            --track-background="hsl(0, 0%, 20%)"
-            --thumb-background="hsl(0, 0%, 40%)"
-            --margin-block="0"
-            min={0}
-            max={2}
-            step={0.1}
-            bind:value={track.gain}
-          />
-        </div>
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div
-          class="wavecontainer"
-          onmousemove={(evt) => {
-            if (mouseDown && evt.target.tagName == "CANVAS")
-              pos = (evt.layerX / evt.target.offsetWidth) * duration;
-          }}
-          onmousedown={() => (mouseDown = true)}
-          onmouseup={(evt) => {
-            mouseDown = false;
-            if (evt.target.tagName == "CANVAS")
-              pos = (evt.layerX / evt.target.offsetWidth) * duration;
-            reprepare();
-          }}
-        >
-          <AudioWaveform
-            height={100 * pixelRatio}
-            width={1000 * pixelRatio * zoom * (duration / 120)}
-            barWidth={1}
-            progressColor="hsl(0, 0%, 50%)"
-            color="hsl(0, 0%, 20%)"
-            peaks={track.peaks ?? []}
-            position={pospct}
-          />
-        </div>
-      {/each}
-    </div>
-  {:else}
-    <h3>Loading...</h3>
-  {/if}
+	<div class="header">
+		<h1>{data.details.name}</h1>
+		<h3 style="color: gray">({data.details.date})</h3>
+	</div>
+	<div class="controls">
+		<button onclick={togglePlay}>{playing ? "Pause" : "Play"}</button>
+		<div>
+			<Slider
+				--track-width="180px"
+				--track-height="20px"
+				min={0.1}
+				max={2}
+				step={0.1}
+				bind:value={zoom}
+			/>
+			<kbd>{zoom}</kbd>
+		</div>
+	</div>
+	<div class="tracks" style:--pos={`${pospct}%`}>
+		<div class="headers">
+			{#each tracks as track}
+				<div class="trackheader">
+					<p>{track.details.name.split("=").at(-1)?.split(".")[0]}</p>
+					<div class="toggles">
+						<button
+							class={track.solo ? "active" : ""}
+							onclick={() => (track.solo = !track.solo)}>Solo</button
+						>
+						<button
+							class={track.mute ? "active" : ""}
+							onclick={() => (track.mute = !track.mute)}>Mute</button
+						>
+					</div>
+					<div class="toggles">
+						<Slider
+							--track-width="140px"
+							--track-height="20px"
+							--volume-width={`${track.currentLoudness * 160}px`}
+							--track-background="linear-gradient(90deg,  transparent, var(--volume-width), hsl(0, 0%, 30%) var(--volume-width)), linear-gradient(90deg, hsl(119, 100%, 30%), 66%,  hsl(41, 100%, 50%), 90%, hsl(0, 100%, 30%))"
+							--thumb-background="hsl(0, 0%, 50%)"
+							--margin-block="0"
+							min={-18}
+							max={6}
+							step={1}
+							bind:value={track.gainDB}
+						/>
+						<p>{track.gainDB}dB</p>
+					</div>
+				</div>
+			{/each}
+		</div>
+		<div class="waveforms">
+			<div class="playhead"></div>
+			{#each tracks as track}
+				<!-- svelte-ignore a11y_no_static_element_interactions -->
+				<div
+					class="wavecontainer"
+					onmousemove={(evt) => {
+						if (mouseDown)
+							pos = (evt.layerX / evt.target!.offsetWidth) * duration;
+					}}
+					onmousedown={() => (mouseDown = true)}
+					onmouseup={(evt) => {
+						mouseDown = false;
+						pos = (evt.layerX / evt.target!.offsetWidth) * duration;
+						updatePlayerPos();
+					}}
+				>
+					<AudioWaveform
+						height={100}
+						width={1000 * zoom * (duration / 240)}
+						color="hsla(0, 0%, 20%, 70%)"
+						peaks={track.peaks ?? []}
+						position={pospct}
+					/>
+				</div>
+			{/each}
+		</div>
+	</div>
 </div>
 
 <style>
-  .page {
-    height: 100vh;
-  }
-  .controls {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    & > * {
-      display: flex;
-      align-items: center;
-    }
-    margin-bottom: 12px;
-  }
-  .tracks {
-    position: absolute;
-    display: grid;
-    grid-template-columns: 200px 1fr;
-    place-content: start;
-    left: 8px;
-    width: calc(100% - 16px);
-    height: max-content;
-    overflow-x: scroll;
-    & > * {
-      height: 100px;
-      border: 0.5px solid hsl(0, 0%, 15%);
-    }
-    & > .trackheader {
-      p {
-        margin: 0;
-      }
-      .toggles {
-        margin: 4px;
-        display: flex;
-        & > button {
-          padding: 3px;
-          margin: 0;
-          &:first-child {
-            border-radius: 8px 0 0 8px;
-            border-right: 1px solid hsl(0, 0%, 20%);
-          }
-          &:last-child {
-            border-radius: 0 8px 8px 0;
-          }
-        }
-      }
-    }
-  }
-  .active {
-    background: hsl(0, 0%, 70%);
-    color: black;
-  }
-  :global(.progress-wave-wrapper) {
-    transition: none !important;
-    height: 100px !important;
-  }
+	.controls {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+		& > * {
+			display: flex;
+			align-items: center;
+		}
+		margin-bottom: 12px;
+	}
+	.tracks {
+		position: absolute;
+		display: grid;
+		grid-template-columns: 200px 1fr;
+		place-content: start;
+		width: 100%;
+		left: -1px;
+		height: max-content;
+		.headers {
+			display: flex;
+			flex-direction: column;
+			& > * {
+				display: grid;
+				align-content: center;
+				padding-left: 4px;
+				gap: 4px;
+				border-bottom: 1px inset hsl(0, 0%, 15%);
+				border-right: 1px inset hsl(0, 0%, 15%);
+				.toggles {
+					display: flex;
+					align-items: center;
+					gap: 4px;
+				}
+				p {
+					margin: 0;
+				}
+				&:last-child {
+					border-bottom: none !important;
+				}
+			}
+		}
+
+		.waveforms {
+			position: relative;
+			& > * {
+				border-bottom: 1px inset hsl(0, 0%, 15%);
+				&:last-child {
+					border-bottom: none !important;
+				}
+			}
+			.playhead {
+				left: var(--pos);
+				top: 0;
+				height: 100%;
+				position: absolute;
+				content: "";
+				border-right: 1px solid white;
+				z-index: 2;
+				pointer-events: none;
+				&::before {
+					content: "";
+					position: absolute;
+					top: -10px;
+					left: -10px;
+					width: 20px;
+					height: 20px;
+					background: url(/playhead.svg);
+					background-repeat: no-repeat;
+					background-size: cover;
+					rotate: 180deg;
+				}
+			}
+			background: linear-gradient(
+				90deg,
+				hsla(0, 0%, 20%, 20%) var(--pos),
+				transparent var(--pos)
+			);
+		}
+
+		.headers > *,
+		.waveforms > * {
+			height: 100px;
+		}
+	}
+
+	.active {
+		background: hsl(0, 0%, 70%);
+		color: black;
+	}
 </style>
