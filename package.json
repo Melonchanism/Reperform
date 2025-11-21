@@ -28,8 +28,10 @@
 		"@uppy/tus": "^5.0.2",
 		"konva": "^10.0.8",
 		"svelte-audio-waveform": "^0.0.5",
-		"svelte-awesome-slider": "^2.0.0",
 		"webaudio-peaks": "^1.0.0",
 		"xhook": "^1.6.2"
+	},
+	"engines": {
+		"node": ">= 22"
 	}
 }
