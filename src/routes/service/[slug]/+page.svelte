@@ -4,22 +4,33 @@
 	import AudioWaveform from "$lib/AudioWaveform/AudioWaveform.svelte";
 	import { getPeaks } from "$lib/AudioWaveform/utils";
 	import Slider from "$lib/Svelte-Awesome-Slider.svelte";
+	import unmuteIosAudio from "unmute-ios-audio";
+	import GainSlider from "$lib/GainSlider.svelte";
 
 	let { data }: PageProps = $props();
 
+	let audioCtx: AudioContext;
+	let masterGainNode: GainNode;
+	let masterAnalyserNode: AnalyserNode;
+	let masterPeak: number = $state(0);
+	let masterGainDB = $state(0);
+	let tracks: LoadedTrack[] = $state([]);
+
+	$effect(() => {
+		masterGainDB;
+		if (masterGainNode) masterGainNode.gain.value = 10 ** (masterGainDB / 20);
+	});
+
 	let playing = $state(false);
-	let fullyLoaded = $state(false);
+	let loadedPct = $derived(tracks.length / data.tracks.length);
 	let pos = $state(0);
 	let playStart = $state(0);
 	let duration = $state(1);
-	let pospct = $derived((pos / duration) * 100);
+	let pospct = $derived(pos / duration);
 
 	let zoom = $state(1);
 
 	let mouseDown = $state(false);
-
-	let audioCtx: AudioContext;
-	let tracks: LoadedTrack[] = $state([]);
 
 	class LoadedTrack {
 		details: {
@@ -38,13 +49,8 @@
 		solo = $state(false);
 		gainNode?: GainNode;
 		gainDB = $state(0);
-		gain: number = $derived(
-			this.mute || (!this.solo && tracks.find((track) => track.solo))
-				? 0
-				: 10 ** (this.gainDB / 20)
-		);
 		analyserNode?: AnalyserNode;
-		currentLoudness: number = $state(0);
+		peak: number = $state(0);
 
 		constructor(track: { name: string; url: string }, context: AudioContext) {
 			this.details = track;
@@ -52,10 +58,14 @@
 			this.gainNode = audioCtx.createGain();
 			this.analyserNode = audioCtx.createAnalyser();
 			this.gainNode.connect(this.analyserNode);
-			this.analyserNode.connect(audioCtx.destination);
+			this.analyserNode.connect(masterGainNode);
 			$effect.root(() => {
 				$effect(() => {
-					if (this.gainNode) this.gainNode.gain.value = this.gain;
+					if (this.gainNode)
+						this.gainNode.gain.value =
+							this.mute || (!this.solo && tracks.find((track) => track.solo))
+								? 0
+								: 10 ** (this.gainDB / 20);
 				});
 			});
 		}
@@ -71,6 +81,27 @@
 			});
 		}
 	}
+
+	onMount(() => {
+		if (navigator.audioSession) navigator.audioSession.type = "transient-solo";
+		unmuteIosAudio();
+		audioCtx = new AudioContext();
+		masterGainNode = audioCtx.createGain();
+		masterAnalyserNode = audioCtx.createAnalyser();
+		masterGainNode.connect(masterAnalyserNode);
+		masterAnalyserNode.connect(audioCtx.destination);
+		(async () => {
+			for (const track of data.tracks)
+				tracks.push(await new LoadedTrack(track, audioCtx).load());
+			prepare();
+			duration =
+				tracks[0].source!.buffer!.length / tracks[0].source!.buffer!.sampleRate;
+		})();
+		return () => {
+			if (playing) stop();
+			audioCtx.close();
+		};
+	});
 
 	function prepare() {
 		for (const track of tracks) {
@@ -113,30 +144,14 @@
 	function updateLoop() {
 		if (!mouseDown && playing) {
 			pos = audioCtx.currentTime - playStart;
-			for (const track of tracks)
-				track.currentLoudness = getLevel01(track.analyserNode!);
+			for (const track of tracks) track.peak = getLevel01(track.analyserNode!);
+			masterPeak = getLevel01(masterAnalyserNode);
 			requestAnimationFrame(updateLoop);
 		} else {
-			for (const track of tracks) track.currentLoudness = 0;
+			for (const track of tracks) track.peak = 0;
+			masterPeak = 0;
 		}
 	}
-
-	onMount(() => {
-		if (navigator.audioSession) navigator.audioSession.type = "transient-solo";
-		audioCtx = new AudioContext();
-		(async () => {
-			for (const track of data.tracks)
-				tracks.push(await new LoadedTrack(track, audioCtx).load());
-			prepare();
-			duration =
-				tracks[0].source!.buffer!.length / tracks[0].source!.buffer!.sampleRate;
-		})();
-		fullyLoaded = true;
-		return () => {
-			if (playing) stop();
-			audioCtx.close();
-		};
-	});
 
 	function updatePlayerPos() {
 		let originalState = playing;
@@ -171,6 +186,7 @@
 	<div class="controls">
 		<button onclick={togglePlay}>{playing ? "Pause" : "Play"}</button>
 		<div>
+			<p>Zoom:</p>
 			<Slider
 				--track-width="180px"
 				--track-height="20px"
@@ -179,10 +195,15 @@
 				step={0.1}
 				bind:value={zoom}
 			/>
-			<kbd>{zoom}</kbd>
+			<p>{zoom}</p>
+		</div>
+		<div>
+			<p>Master:</p>
+			<GainSlider peak={masterPeak} bind:gainDB={masterGainDB} />
+			<p>{masterGainDB}㏈</p>
 		</div>
 	</div>
-	<div class="tracks" style:--pos={`${pospct}%`}>
+	<div class="tracks">
 		<div class="headers">
 			{#each tracks as track}
 				<div class="trackheader">
@@ -198,28 +219,20 @@
 						>
 					</div>
 					<div class="toggles">
-						<Slider
-							--track-width="140px"
-							--track-height="20px"
-							--volume-width={`${track.currentLoudness * 100}%`}
-							--track-background="linear-gradient(90deg,  transparent, var(--volume-width), hsl(0, 0%, 30%) var(--volume-width)), linear-gradient(90deg, hsl(119, 100%, 30%), 66%,  hsl(41, 100%, 50%), 98%, hsl(0, 100%, 30%))"
-							--thumb-background="hsl(0, 0%, 50%)"
-							--margin-block="0"
-							min={-18}
-							max={6}
-							step={1}
-							bind:value={track.gainDB}
-						/>
-						<p style:color={track.currentLoudness > 0.99 ? "red" : "green"}>
-							{track.gainDB}dB
-						</p>
+						<GainSlider peak={track.peak} bind:gainDB={track.gainDB} />
+						<p style:color={track.peak > 0.99 ? "red" : ""}>{track.gainDB}㏈</p>
 					</div>
 				</div>
 			{/each}
 		</div>
 		<div class="waveforms">
-			<div class="playhead"></div>
-			<div class="progress"></div>
+			<div
+				class="indicators"
+				style:width="{1000 * zoom * (duration / 240) * pospct}px"
+			>
+				<div class="playhead"></div>
+				<div class="progress"></div>
+			</div>
 			{#each tracks as track}
 				<!-- svelte-ignore a11y_no_static_element_interactions -->
 				<div
@@ -252,7 +265,7 @@
 	.controls {
 		display: flex;
 		align-items: center;
-		gap: 4px;
+		gap: 16px;
 		& > * {
 			display: flex;
 			align-items: center;
@@ -262,7 +275,7 @@
 	.tracks {
 		position: absolute;
 		display: grid;
-		grid-template-columns: 200px 1fr;
+		grid-template-columns: 195px 1fr;
 		place-content: start;
 		width: 100%;
 		left: -1px;
@@ -292,6 +305,7 @@
 		.waveforms {
 			position: relative;
 			overflow-x: scroll;
+			overflow-y: hidden;
 			& > * {
 				border-bottom: 1px inset hsl(0, 0%, 15%);
 				width: fit-content;
@@ -299,8 +313,13 @@
 					border-bottom: none !important;
 				}
 			}
+			.indicators {
+				border: none !important;
+				position: absolute;
+				height: 100%;
+			}
 			.playhead {
-				left: var(--pos);
+				right: 0;
 				top: 0;
 				height: 100%;
 				position: absolute;
@@ -324,8 +343,8 @@
 			.progress {
 				top: 0;
 				height: 100%;
-				position: absolute;
-				width: var(--pos);
+				/*position: absolute;*/
+				width: 100%;
 				background: hsla(0, 0%, 20%, 20%);
 			}
 		}

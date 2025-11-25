@@ -37,11 +37,8 @@ SOFTWARE. -->
 
 	let {
 		peaks,
-		position = 0,
 		color = "grey",
-		progressColor = "#8a005e",
 		gradientColors = [],
-		progressGradientColors = [],
 		height,
 		barWidth,
 		width,
