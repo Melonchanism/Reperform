@@ -6,6 +6,7 @@
 	import Slider from "$lib/Svelte-Awesome-Slider.svelte";
 	import unmuteIosAudio from "unmute-ios-audio";
 	import GainSlider from "$lib/GainSlider.svelte";
+	import { blur, fade, fly, slide } from "svelte/transition";
 
 	let { data }: PageProps = $props();
 
@@ -91,11 +92,11 @@
 		masterGainNode.connect(masterAnalyserNode);
 		masterAnalyserNode.connect(audioCtx.destination);
 		(async () => {
-			for (const track of data.tracks)
+			for (const track of data.tracks) {
 				tracks.push(await new LoadedTrack(track, audioCtx).load());
+				duration = tracks[0].data!.length / tracks[0].data!.sampleRate;
+			}
 			prepare();
-			duration =
-				tracks[0].source!.buffer!.length / tracks[0].source!.buffer!.sampleRate;
 		})();
 		return () => {
 			if (playing) stop();
@@ -167,6 +168,9 @@
 				togglePlay();
 				break;
 			case "Enter":
+				evt.preventDefault();
+				pos = 0;
+				updatePlayerPos();
 				break;
 		}
 	}
@@ -183,85 +187,112 @@
 		<h1>{data.details.name}</h1>
 		<h3 style="color: gray">({data.details.date})</h3>
 	</div>
-	<div class="controls">
-		<button onclick={togglePlay}>{playing ? "Pause" : "Play"}</button>
-		<div>
-			<p>Zoom:</p>
-			<Slider
-				--track-width="180px"
-				--track-height="20px"
-				min={0.1}
-				max={2}
-				step={0.1}
-				bind:value={zoom}
-			/>
-			<p>{zoom}</p>
-		</div>
-		<div>
-			<p>Master:</p>
-			<GainSlider peak={masterPeak} bind:gainDB={masterGainDB} />
-			<p>{masterGainDB}㏈</p>
-		</div>
-	</div>
-	<div class="tracks">
-		<div class="headers">
-			{#each tracks as track}
-				<div class="trackheader">
-					<p>{track.details.name.split("=").at(-1)?.split(".")[0]}</p>
-					<div class="toggles">
-						<button
-							class={track.solo ? "active" : ""}
-							onclick={() => (track.solo = !track.solo)}>Solo</button
-						>
-						<button
-							class={track.mute ? "active" : ""}
-							onclick={() => (track.mute = !track.mute)}>Mute</button
-						>
-					</div>
-					<div class="toggles">
-						<GainSlider peak={track.peak} bind:gainDB={track.gainDB} />
-						<p style:color={track.peak > 0.99 ? "red" : ""}>{track.gainDB}㏈</p>
-					</div>
-				</div>
-			{/each}
-		</div>
-		<div class="waveforms">
-			<div
-				class="indicators"
-				style:width="{1000 * zoom * (duration / 240) * pospct}px"
-			>
-				<div class="playhead"></div>
-				<div class="progress"></div>
+	<div>
+		{#if loadedPct !== 1}
+			<div class="loading" out:blur>
+				<h2>Loading...</h2>
+				<p>{loadedPct * 100}%</p>
 			</div>
-			{#each tracks as track}
-				<!-- svelte-ignore a11y_no_static_element_interactions -->
+		{/if}
+		<div class="controls">
+			<button onclick={togglePlay}>
+				<img src={playing ? "/pause.svg" : "/play.svg"} alt="" />
+			</button>
+			<div>
+				<p>Zoom:</p>
+				<Slider
+					--track-width="180px"
+					--track-height="20px"
+					min={0.1}
+					max={2}
+					step={0.1}
+					bind:value={zoom}
+				/>
+				<p>{zoom}</p>
+			</div>
+			<div>
+				<p>Master:</p>
+				<GainSlider peak={masterPeak} bind:gainDB={masterGainDB} />
+				<p>{masterGainDB}㏈</p>
+			</div>
+		</div>
+		<div class="tracks">
+			<div class="headers">
+				{#each tracks as track}
+					<div class="trackheader" transition:fly={{ y: 0, x: -195 }}>
+						<p>{track.details.name.split("=").at(-1)?.split(".")[0]}</p>
+						<div class="toggles">
+							<button
+								class={track.solo ? "active" : ""}
+								onclick={() => (track.solo = !track.solo)}>Solo</button
+							>
+							<button
+								class={track.mute ? "active" : ""}
+								onclick={() => (track.mute = !track.mute)}>Mute</button
+							>
+						</div>
+						<div class="toggles">
+							<GainSlider peak={track.peak} bind:gainDB={track.gainDB} />
+							<p style:color={track.peak > 0.99 ? "red" : ""}>
+								{track.gainDB}㏈
+							</p>
+						</div>
+					</div>
+				{/each}
+			</div>
+			<div class="waveforms">
 				<div
-					class="wavecontainer"
-					onmousemove={(evt) => {
-						if (mouseDown)
-							pos = (evt.layerX / evt.target!.offsetWidth) * duration;
-					}}
-					onmousedown={() => (mouseDown = true)}
-					onmouseup={(evt) => {
-						mouseDown = false;
-						pos = (evt.layerX / evt.target!.offsetWidth) * duration;
-						updatePlayerPos();
-					}}
+					class="indicators"
+					style:width="{1000 * zoom * (duration / 240) * pospct}px"
 				>
-					<AudioWaveform
-						height={100}
-						width={1000 * zoom * (duration / 240)}
-						color="hsla(0, 0%, 20%, 70%)"
-						peaks={track.peaks ?? []}
-						position={pospct}
-					/>
+					<div class="playhead"></div>
+					<div class="progress"></div>
 				</div>
-			{/each}
+				{#each tracks as track}
+					<!-- svelte-ignore a11y_no_static_element_interactions -->
+					<div
+						class="wavecontainer"
+						transition:slide={{ axis: "x", duration, delay: 150 }}
+						onmousemove={(evt) => {
+							if (mouseDown)
+								pos = (evt.layerX / evt.target!.offsetWidth) * duration;
+						}}
+						onmousedown={() => (mouseDown = true)}
+						onmouseup={(evt) => {
+							mouseDown = false;
+							pos = (evt.layerX / evt.target!.offsetWidth) * duration;
+							updatePlayerPos();
+						}}
+					>
+						<AudioWaveform
+							height={100}
+							width={1000 * zoom * (duration / 240)}
+							color="hsla(0, 0%, 20%, 70%)"
+							peaks={track.peaks ?? []}
+							position={pospct}
+						/>
+					</div>
+				{/each}
+			</div>
 		</div>
 	</div>
 </div>
 
 <style>
+	.loading {
+		position: absolute;
+		z-index: 10;
+		left: 0;
+		width: 100%;
+		height: 90%;
+		background-color: hsla(0, 0%, 20%, 50%);
+		backdrop-filter: blur(10px);
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+	}
+
 	.controls {
 		display: flex;
 		align-items: center;
@@ -324,14 +355,14 @@
 				height: 100%;
 				position: absolute;
 				content: "";
-				border-right: 1px solid white;
+				border-right: 2px solid white;
 				z-index: 2;
 				pointer-events: none;
 				&::before {
 					content: "";
 					position: absolute;
 					top: -10px;
-					left: -10px;
+					left: -9px;
 					width: 20px;
 					height: 20px;
 					background: url(/playhead.svg);
