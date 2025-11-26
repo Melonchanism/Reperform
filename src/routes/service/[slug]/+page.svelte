@@ -39,8 +39,6 @@
 			url: string;
 		};
 		playing = false;
-		readyState?: number = $state();
-		ready = $derived(this.readyState == 4);
 		context: AudioContext;
 		data?: AudioBuffer;
 		source?: AudioBufferSourceNode;
