@@ -6,7 +6,7 @@
 	import Slider from "$lib/Svelte-Awesome-Slider.svelte";
 	import unmuteIosAudio from "unmute-ios-audio";
 	import GainSlider from "$lib/GainSlider.svelte";
-	import { blur, fade, fly, slide } from "svelte/transition";
+	import { blur } from "svelte/transition";
 
 	let { data }: PageProps = $props();
 
@@ -216,7 +216,7 @@
 		<div class="tracks">
 			<div class="headers">
 				{#each tracks as track}
-					<div class="trackheader" transition:fly={{ y: 0, x: -195 }}>
+					<div class="trackheader" transition:blur>
 						<p>{track.details.name.split("=").at(-1)?.split(".")[0]}</p>
 						<div class="toggles">
 							<button
@@ -249,7 +249,7 @@
 					<!-- svelte-ignore a11y_no_static_element_interactions -->
 					<div
 						class="wavecontainer"
-						transition:slide={{ axis: "x", duration, delay: 150 }}
+						transition:blur
 						onmousemove={(evt) => {
 							if (mouseDown)
 								pos = (evt.layerX / evt.target!.offsetWidth) * duration;
@@ -277,7 +277,7 @@
 
 <style>
 	.loading {
-		position: absolute;
+		position: fixed;
 		z-index: 10;
 		left: 0;
 		width: 100%;
