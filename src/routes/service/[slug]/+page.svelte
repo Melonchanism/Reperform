@@ -4,7 +4,6 @@
 	import AudioWaveform from "$lib/AudioWaveform/AudioWaveform.svelte";
 	import { getPeaks } from "$lib/AudioWaveform/utils";
 	import Slider from "$lib/Svelte-Awesome-Slider.svelte";
-	import unmuteIosAudio from "unmute-ios-audio";
 	import GainSlider from "$lib/GainSlider.svelte";
 	import { blur } from "svelte/transition";
 
@@ -79,8 +78,9 @@
 	}
 
 	onMount(() => {
-		if (navigator.audioSession) navigator.audioSession.type = "transient-solo";
-		unmuteIosAudio();
+		if (navigator.audioSession) {
+			navigator.audioSession.type = "playback";
+		}
 		audioCtx = new AudioContext();
 		masterGainNode = audioCtx.createGain();
 		masterAnalyserNode = audioCtx.createAnalyser();
