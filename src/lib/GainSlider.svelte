@@ -1,18 +1,11 @@
 <script lang="ts">
 	import Slider from "$lib/Svelte-Awesome-Slider.svelte";
-	interface Props {
-		peak: number;
-		width: number;
-		min: number;
-		max: number;
-		gainDB: number;
-	}
 	let {
-		peak,
+		peak = 0,
 		width = 140,
 		min = -24,
 		max = 6,
-		gainDB = $bindable(),
+		gainDB = $bindable(0),
 	} = $props();
 </script>
 
