@@ -43,7 +43,6 @@
 		data?: AudioBuffer;
 		source?: AudioBufferSourceNode;
 		peaks?: number[] = $state([]);
-		blob?: string = $state();
 		mute = $state(false);
 		solo = $state(false);
 		gainNode?: GainNode;
