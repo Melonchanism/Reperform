@@ -50,13 +50,6 @@
 		solo = $state(false);
 		gainNode?: GainNode;
 		gainDB = $state(0);
-		gain = $derived.by(() => {
-			if (this.gainNode)
-				this.gainNode.gain.value =
-					this.mute || (!this.solo && tracks.find((track) => track.solo))
-						? 0
-						: 10 ** (this.gainDB / 20);
-		});
 		analyserNode?: AnalyserNode;
 		peak: number = $state(0);
 
@@ -67,6 +60,16 @@
 			this.analyserNode = audioCtx.createAnalyser();
 			this.gainNode.connect(this.analyserNode);
 			this.analyserNode.connect(masterGainNode);
+
+			$effect.root(() => {
+				$effect(() => {
+					if (this.gainNode)
+						this.gainNode.gain.value =
+							this.mute || (!this.solo && tracks.find((track) => track.solo))
+								? 0
+								: 10 ** (this.gainDB / 20);
+				});
+			});
 		}
 
 		async load(): Promise<this> {
