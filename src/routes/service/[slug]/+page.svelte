@@ -24,6 +24,7 @@
 
 	let playing = $state(false);
 	let suspended = $state(false);
+	let loopID = 0;
 	let loadedPct = Spring.of(() => tracks.length / data.tracks.length, {
 		stiffness: 0.1,
 	});
@@ -101,10 +102,10 @@
 			prepare();
 		})();
 		window.actx = audioCtx;
-		audioCtx.addEventListener(
-			"statechange",
-			() => (suspended = audioCtx.state === "suspended")
-		);
+		audioCtx.addEventListener("statechange", () => {
+			suspended = audioCtx.state === "suspended";
+			if (!suspended && playing) updateLoop(true);
+		});
 		return () => {
 			if (playing) stop();
 			audioCtx.close();
@@ -124,14 +125,15 @@
 		playing = true;
 		if (suspended) {
 			audioCtx.resume();
+			playStart = audioCtx.currentTime - pos;
 		} else {
 			prepare();
 			playStart = audioCtx.currentTime - pos;
-			updateLoop();
 			for (const track of tracks) {
 				track.source?.start(0, pos);
 			}
 		}
+		updateLoop(true);
 	}
 
 	function stop() {
@@ -155,12 +157,15 @@
 		return buf.reduce((a, b) => (b > a ? b : a));
 	}
 
-	function updateLoop() {
-		if (!mouseDown && playing) {
+	function updateLoop(initial = false, ID = Math.random()) {
+		if (initial) loopID = ID;
+		if (!mouseDown && playing && !suspended) {
 			pos = audioCtx.currentTime - playStart;
 			for (const track of tracks) track.peak = getLevel01(track.analyserNode!);
 			masterPeak = getLevel01(masterAnalyserNode);
-			requestAnimationFrame(updateLoop);
+			console.log(ID === loopID);
+			if (ID === loopID) requestAnimationFrame(() => updateLoop(false, ID));
+			if (pospct >= 1) stop();
 		} else {
 			for (const track of tracks) track.peak = 0;
 			masterPeak = 0;
@@ -261,10 +266,7 @@
 			<div
 				class="waveforms"
 				onwheel={(evt) => {
-					console.log(evt.deltaY);
-					if (!evt.deltaY) {
-						return;
-					}
+					if (!evt.deltaY) return;
 					evt.currentTarget.scrollLeft += evt.deltaY + evt.deltaX;
 					evt.preventDefault();
 				}}
