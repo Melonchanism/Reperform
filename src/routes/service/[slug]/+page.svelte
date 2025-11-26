@@ -210,7 +210,7 @@
 			<div>
 				<p>Master:</p>
 				<GainSlider peak={masterPeak} bind:gainDB={masterGainDB} />
-				<p>{masterGainDB}㏈</p>
+				<p style:color={masterPeak > 0.99 ? "red" : ""}>{masterGainDB}㏈</p>
 			</div>
 		</div>
 		<div class="tracks">
