@@ -5,7 +5,8 @@
 	import { getPeaks } from "$lib/AudioWaveform/utils";
 	import Slider from "$lib/Svelte-Awesome-Slider.svelte";
 	import GainSlider from "$lib/GainSlider.svelte";
-	import { blur } from "svelte/transition";
+	import { fade, scale } from "svelte/transition";
+	import { Spring } from "svelte/motion";
 
 	let { data }: PageProps = $props();
 
@@ -22,7 +23,9 @@
 	});
 
 	let playing = $state(false);
-	let loadedPct = $derived(tracks.length / data.tracks.length);
+	let loadedPct = Spring.of(() => tracks.length / data.tracks.length, {
+		stiffness: 0.1,
+	});
 	let pos = $state(0);
 	let playStart = $state(0);
 	let duration = $state(1);
@@ -183,10 +186,15 @@
 		<h3 style="color: gray">({data.details.date})</h3>
 	</div>
 	<div>
-		{#if loadedPct !== 1}
-			<div class="loading" out:blur>
-				<h2>Loading...</h2>
-				<p>{loadedPct * 100}%</p>
+		{#if loadedPct.current !== 1}
+			<div class="loading" out:scale>
+				<h2>Loading</h2>
+				<progress max="1" value={loadedPct.current}>loadedPct</progress>
+				<p>
+					{(loadedPct.current * 100).toLocaleString(undefined, {
+						maximumFractionDigits: 0,
+					})}%
+				</p>
 			</div>
 		{/if}
 		<div class="controls">
@@ -214,7 +222,7 @@
 		<div class="tracks">
 			<div class="headers">
 				{#each tracks as track}
-					<div class="trackheader" transition:blur>
+					<div class="trackheader" transition:fade>
 						<p>{track.details.name.split("=").at(-1)?.split(".")[0]}</p>
 						<div class="toggles">
 							<button
@@ -257,7 +265,7 @@
 					<!-- svelte-ignore a11y_no_static_element_interactions -->
 					<div
 						class="wavecontainer"
-						transition:blur
+						transition:fade
 						onmousemove={(evt) => {
 							if (mouseDown)
 								pos = (evt.layerX / evt.target!.offsetWidth) * duration;
@@ -284,18 +292,27 @@
 </div>
 
 <style>
+	.header {
+		position: relative;
+		z-index: 90;
+	}
+
 	.loading {
 		position: fixed;
 		z-index: 10;
+		top: 0;
 		left: 0;
-		width: 100%;
-		height: 90%;
+		width: 100vw;
+		height: 100vh;
 		background-color: hsla(0, 0%, 20%, 50%);
-		backdrop-filter: blur(10px);
+		backdrop-filter: blur(16px);
 		display: flex;
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
+		p {
+			margin: 4px 0 !important;
+		}
 	}
 
 	.controls {
