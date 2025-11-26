@@ -3,6 +3,7 @@ import { supabase } from "$lib/supabase";
 
 export const GET: RequestHandler = async ({ url }) => {
 	const { data, error } = await supabase.from("recordings").select();
+	if (error) throw error;
 	const item: RecordItem | null = data[parseInt(url.pathname.replace("/", ""))];
 	if (item) {
 		return new Response(null, {
