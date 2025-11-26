@@ -264,7 +264,7 @@
 						<AudioWaveform
 							height={100}
 							width={1000 * zoom * (duration / 240)}
-							color="hsla(0, 0%, 20%, 70%)"
+							color="hsl(150deg, 1%, 60%)"
 							peaks={track.peaks ?? []}
 							position={pospct}
 						/>
@@ -357,7 +357,7 @@
 				position: absolute;
 				content: "";
 				border-right: 2px solid white;
-				z-index: 2;
+				z-index: 3;
 				pointer-events: none;
 				&::before {
 					content: "";
@@ -370,14 +370,18 @@
 					background-repeat: no-repeat;
 					background-size: cover;
 					rotate: 180deg;
+					pointer-events: none;
 				}
 			}
 			.progress {
 				top: 0;
+				z-index: 2;
 				height: 100%;
-				/*position: absolute;*/
+				position: absolute;
 				width: 100%;
-				background: hsla(0, 0%, 20%, 20%);
+				background: hsla(0, 0%, 40%, 20%);
+				backdrop-filter: saturate(6000%);
+				pointer-events: none;
 			}
 		}
 
