@@ -23,6 +23,7 @@
 	});
 
 	let playing = $state(false);
+	let suspended = $state(false);
 	let loadedPct = Spring.of(() => tracks.length / data.tracks.length, {
 		stiffness: 0.1,
 	});
@@ -96,9 +97,15 @@
 			}
 			prepare();
 		})();
+		window.actx = audioCtx;
+		audioCtx.addEventListener(
+			"statechange",
+			() => (suspended = audioCtx.state === "suspended")
+		);
 		return () => {
 			if (playing) stop();
 			audioCtx.close();
+			tracks = null;
 		};
 	});
 
@@ -112,10 +119,15 @@
 
 	async function play() {
 		playing = true;
-		playStart = audioCtx.currentTime - pos;
-		updateLoop();
-		for (const track of tracks) {
-			track.source?.start(0, pos);
+		if (suspended) {
+			audioCtx.resume();
+		} else {
+			prepare();
+			playStart = audioCtx.currentTime - pos;
+			updateLoop();
+			for (const track of tracks) {
+				track.source?.start(0, pos);
+			}
 		}
 	}
 
@@ -129,7 +141,7 @@
 		prepare();
 	}
 	function togglePlay() {
-		playing ? stop() : play();
+		playing && !suspended ? stop() : play();
 	}
 
 	function getLevel01(analyser: AnalyserNode) {
@@ -199,7 +211,7 @@
 		{/if}
 		<div class="controls">
 			<button onclick={togglePlay}>
-				<img src={playing ? "/pause.svg" : "/play.svg"} alt="" />
+				<img src={playing && !suspended ? "/pause.svg" : "/play.svg"} alt="" />
 			</button>
 			<div>
 				<p>Zoom:</p>
