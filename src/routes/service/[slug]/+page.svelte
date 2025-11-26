@@ -237,7 +237,17 @@
 					</div>
 				{/each}
 			</div>
-			<div class="waveforms">
+			<div
+				class="waveforms"
+				onwheel={(evt) => {
+					console.log(evt.deltaY);
+					if (!evt.deltaY) {
+						return;
+					}
+					evt.currentTarget.scrollLeft += evt.deltaY + evt.deltaX;
+					evt.preventDefault();
+				}}
+			>
 				<div
 					class="indicators"
 					style:width="{1000 * zoom * (duration / 240) * pospct}px"
