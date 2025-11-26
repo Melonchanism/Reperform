@@ -4,8 +4,6 @@ import type { PageLoad } from "./$types";
 export const load: PageLoad = async () => {
 	const { data, error } = await supabase.from("recordings").select();
 
-	console.log(error);
-
 	if (error !== null) throw error;
 
 	let sorted = new Map<string, RecordItem[]>();
