@@ -294,10 +294,14 @@
 	.controls {
 		display: flex;
 		align-items: center;
-		gap: 16px;
+		flex-wrap: wrap;
+		column-gap: 16px;
 		& > * {
 			display: flex;
 			align-items: center;
+		}
+		p {
+			margin: 8px 0 !important;
 		}
 		margin-bottom: 12px;
 	}
