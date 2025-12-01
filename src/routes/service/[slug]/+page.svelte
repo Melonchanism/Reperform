@@ -262,12 +262,24 @@
 					</div>
 				{/each}
 			</div>
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
 				class="waveforms"
 				onwheel={(evt) => {
 					if (!evt.deltaY) return;
 					evt.currentTarget.scrollLeft += evt.deltaY + evt.deltaX;
 					evt.preventDefault();
+				}}
+				onmousemove={(evt) => {
+					if (mouseDown && evt.target.tagName === "CANVAS")
+						pos = (evt.layerX / evt.target!.offsetWidth) * duration;
+				}}
+				onmousedown={() => (mouseDown = true)}
+				onmouseup={(evt) => {
+					mouseDown = false;
+					if (evt.target.tagName === "CANVAS")
+						pos = (evt.layerX / evt.target!.offsetWidth) * duration;
+					updatePlayerPos();
 				}}
 			>
 				<div
@@ -278,21 +290,7 @@
 					<div class="progress"></div>
 				</div>
 				{#each tracks as track}
-					<!-- svelte-ignore a11y_no_static_element_interactions -->
-					<div
-						class="wavecontainer"
-						transition:fade
-						onmousemove={(evt) => {
-							if (mouseDown)
-								pos = (evt.layerX / evt.target!.offsetWidth) * duration;
-						}}
-						onmousedown={() => (mouseDown = true)}
-						onmouseup={(evt) => {
-							mouseDown = false;
-							pos = (evt.layerX / evt.target!.offsetWidth) * duration;
-							updatePlayerPos();
-						}}
-					>
+					<div class="wavecontainer" transition:fade>
 						<AudioWaveform
 							height={100}
 							width={1000 * zoom * (duration / 240)}
@@ -389,7 +387,8 @@
 			.indicators {
 				border: none !important;
 				position: absolute;
-				height: 100%;
+				height: 100% !important;
+				pointer-events: none;
 			}
 			.playhead {
 				right: 0;
