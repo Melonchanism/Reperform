@@ -163,7 +163,6 @@
 			pos = audioCtx.currentTime - playStart;
 			for (const track of tracks) track.peak = getLevel01(track.analyserNode!);
 			masterPeak = getLevel01(masterAnalyserNode);
-			console.log(ID === loopID);
 			if (ID === loopID) requestAnimationFrame(() => updateLoop(false, ID));
 			if (pospct >= 1) stop();
 		} else {
@@ -398,7 +397,7 @@
 				height: 100%;
 				position: absolute;
 				content: "";
-				border-right: 2px solid white;
+				border: 1px solid hsla(0, 0%, 100%, 70%);
 				z-index: 3;
 				pointer-events: none;
 				&::before {
@@ -421,8 +420,8 @@
 				height: 100%;
 				position: absolute;
 				width: 100%;
-				background: hsla(0, 0%, 40%, 20%);
-				backdrop-filter: saturate(6000%);
+				/*background: hsla(0, 0%, 40%, 20%);*/
+				backdrop-filter: saturate(5000%);
 				pointer-events: none;
 			}
 		}

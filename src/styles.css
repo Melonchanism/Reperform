@@ -18,6 +18,10 @@
 	--border-radius: 16px;
 }
 
+* {
+	user-select: none;
+}
+
 body {
 	margin: 0;
 	padding: 8px;

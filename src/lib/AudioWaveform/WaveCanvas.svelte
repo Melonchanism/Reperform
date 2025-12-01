@@ -34,15 +34,6 @@
 		updateSize(canvasWidth, canvasHeight, peaks);
 	});
 
-	const absMaxf = (values: number[]) => {
-		let max = -Infinity;
-		for (const i in values) {
-			const num = Math.abs(values[i]);
-			if (num > max) max = num;
-		}
-		return max;
-	};
-
 	const maxf = (values: number[]) => Math.max(...values);
 
 	const minf = (values: number[]) => Math.min(...values);
@@ -72,7 +63,7 @@
 		const bar = params.barWidth;
 		const gap = 2;
 		const step = bar + gap;
-		const absmax = params.normalize ? absMaxf(peaks) : 1;
+		const absmax = 1;
 		const scale = peaks.length / width;
 
 		if (params.gradientColors.length > 0) {
