@@ -49,15 +49,18 @@
 		} else if (ratio > 16) {
 			majorEvery = 4;
 			minorEvery = 0.5;
-		} else if (ratio > 6) {
+		} else if (ratio > 7) {
 			majorEvery = 5;
 			minorEvery = 1;
 		} else if (ratio > 4) {
 			majorEvery = 10;
 			minorEvery = 1;
-		} else if (ratio > 2.5) {
+		} else if (ratio > 3) {
 			majorEvery = 5;
 			minorEvery = 2;
+		} else if (ratio > 1) {
+			majorEvery = 6;
+			minorEvery = 5;
 		} else {
 			majorEvery = 6;
 			minorEvery = 10;
