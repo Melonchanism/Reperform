@@ -7,6 +7,7 @@
 	import GainSlider from "$lib/GainSlider.svelte";
 	import { fade, scale } from "svelte/transition";
 	import { Spring } from "svelte/motion";
+	import TimeBar from "$lib/TimeBar.svelte";
 
 	let { data }: PageProps = $props();
 
@@ -240,6 +241,7 @@
 		</div>
 		<div class="tracks">
 			<div class="headers">
+				<div class="timebar"></div>
 				{#each tracks as track}
 					<div class="trackheader" transition:fade>
 						<p>{track.details.name.split("=").at(-1)?.split(".")[0]}</p>
@@ -288,6 +290,13 @@
 				>
 					<div class="playhead"></div>
 					<div class="progress"></div>
+				</div>
+				<div class="timebar">
+					<TimeBar
+						width={1000 * zoom * (duration / 240)}
+						height={20}
+						{duration}
+					/>
 				</div>
 				{#each tracks as track}
 					<div class="wavecontainer" transition:fade>
@@ -401,13 +410,13 @@
 				&::before {
 					content: "";
 					position: absolute;
-					top: -10px;
-					left: -9px;
+					top: -6.5px;
+					left: -10px;
 					width: 20px;
 					height: 20px;
 					background: url(/playhead.svg);
 					background-repeat: no-repeat;
-					background-size: cover;
+					background-size: contain;
 					rotate: 180deg;
 					pointer-events: none;
 				}
@@ -425,8 +434,12 @@
 		}
 
 		.headers > *,
-		.waveforms > * {
+		.waveforms > *:not(.timebar) {
 			height: 100px;
+		}
+		.timebar {
+			padding-top: 15px;
+			height: 20px;
 		}
 	}
 
