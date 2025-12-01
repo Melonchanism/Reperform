@@ -23,6 +23,12 @@
 		if (masterGainNode) masterGainNode.gain.value = 10 ** (masterGainDB / 20);
 	});
 
+	$effect(() => {
+		zoom;
+		// Fix using manual calculations because this forces vertical as well because of lack of support for container option
+		// document.querySelector(".playhead")?.scrollIntoView({ inline: "nearest" });
+	});
+
 	let playing = $state(false);
 	let suspended = $state(false);
 	let loopID = 0;
@@ -33,8 +39,8 @@
 	let playStart = $state(0);
 	let duration = $state(1);
 	let pospct = $derived(pos / duration);
-
 	let zoom = $state(1);
+	let width = $derived(1000 * zoom * (duration / 240));
 
 	let mouseDown = $state(false);
 
@@ -227,8 +233,8 @@
 					--track-width="180px"
 					--track-height="20px"
 					min={0.1}
-					max={2}
-					step={0.1}
+					max={4}
+					step={0.01}
 					bind:value={zoom}
 				/>
 				<p>{zoom}</p>
@@ -273,36 +279,33 @@
 					evt.preventDefault();
 				}}
 				onmousemove={(evt) => {
-					if (mouseDown && evt.target.tagName === "CANVAS")
-						pos = (evt.layerX / evt.target!.offsetWidth) * duration;
+					if (
+						mouseDown &&
+						["CANVAS", "path", "svg"].includes(evt.target.tagName)
+					)
+						pos = (evt.layerX / width) * duration;
 				}}
 				onmousedown={() => (mouseDown = true)}
 				onmouseup={(evt) => {
 					mouseDown = false;
-					if (evt.target.tagName === "CANVAS")
-						pos = (evt.layerX / evt.target!.offsetWidth) * duration;
+					console.log(evt.layerX);
+					if (["CANVAS", "path", "svg"].includes(evt.target.tagName))
+						pos = (evt.layerX / width) * duration;
 					updatePlayerPos();
 				}}
 			>
-				<div
-					class="indicators"
-					style:width="{1000 * zoom * (duration / 240) * pospct}px"
-				>
+				<div class="indicators" style:width="{width * pospct}px">
 					<div class="playhead"></div>
 					<div class="progress"></div>
 				</div>
 				<div class="timebar">
-					<TimeBar
-						width={1000 * zoom * (duration / 240)}
-						height={20}
-						{duration}
-					/>
+					<TimeBar {width} height={20} {duration} />
 				</div>
 				{#each tracks as track}
 					<div class="wavecontainer" transition:fade>
 						<AudioWaveform
 							height={100}
-							width={1000 * zoom * (duration / 240)}
+							{width}
 							color="hsl(150deg, 1%, 60%)"
 							peaks={track.peaks ?? []}
 						/>
