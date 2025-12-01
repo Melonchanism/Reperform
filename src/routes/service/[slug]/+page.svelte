@@ -296,7 +296,6 @@
 							width={1000 * zoom * (duration / 240)}
 							color="hsl(150deg, 1%, 60%)"
 							peaks={track.peaks ?? []}
-							position={pospct}
 						/>
 					</div>
 				{/each}
