@@ -198,6 +198,19 @@
 				break;
 		}
 	}
+
+	async function adjustZoom(val: number, layer: number, set = false) {
+		const oldZoom = zoom;
+		if (!set) {
+			zoom *= Math.exp(-val / 370);
+			zoom = +Math.min(4, Math.max(0.1, zoom)).toFixed(3);
+		} else {
+			zoom = val;
+		}
+
+		document.querySelector(".waveforms")!.scrollLeft +=
+			(layer / oldZoom) * zoom - layer;
+	}
 </script>
 
 <svelte:head>
@@ -235,7 +248,10 @@
 					min={0.1}
 					max={4}
 					step={0.01}
-					bind:value={zoom}
+					value={zoom}
+					onInput={(val) => {
+						adjustZoom(val, width * pospct, true);
+					}}
 				/>
 				<p>{zoom}</p>
 			</div>
@@ -275,8 +291,12 @@
 				class="waveforms"
 				onwheel={(evt) => {
 					if (!evt.deltaY) return;
-					evt.currentTarget.scrollLeft += evt.deltaY + evt.deltaX;
 					evt.preventDefault();
+					if (evt.ctrlKey || evt.metaKey) {
+						adjustZoom(evt.deltaY, evt.layerX);
+						return;
+					}
+					evt.currentTarget.scrollLeft += evt.deltaY + evt.deltaX;
 				}}
 				onmousemove={(evt) => {
 					if (
