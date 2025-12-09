@@ -251,12 +251,17 @@
 						adjustZoom(val, width * pospct, true);
 					}}
 				/>
-				<p>{zoom}</p>
+				<p style:font-family="monospace">{zoom.toFixed(2)}</p>
 			</div>
 			<div>
 				<p>Master:</p>
 				<GainSlider peak={masterPeak} bind:gainDB={masterGainDB} />
-				<p style:color={masterPeak > 0.99 ? "red" : ""}>{masterGainDB}㏈</p>
+				<p
+					style:color={masterPeak > 0.99 ? "red" : ""}
+					style:font-family="monospace"
+				>
+					{masterGainDB}㏈
+				</p>
 			</div>
 		</div>
 		<div class="tracks">
@@ -277,7 +282,10 @@
 						</div>
 						<div class="toggles">
 							<GainSlider peak={track.peak} bind:gainDB={track.gainDB} />
-							<p style:color={track.peak > 0.99 ? "red" : ""}>
+							<p
+								style:color={track.peak > 0.99 ? "red" : ""}
+								style:font-family="monospace"
+							>
 								{track.gainDB}㏈
 							</p>
 						</div>
