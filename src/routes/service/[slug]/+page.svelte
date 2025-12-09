@@ -159,7 +159,7 @@
 	function getLevel01(analyser: AnalyserNode) {
 		const buf = new Float32Array(analyser.fftSize);
 		analyser.getFloatTimeDomainData(buf);
-		// Old volume function, didn't calculate clip
+		// Loudness, doesn't calculate clip
 		// return buf.reduce((a, b) => a + Math.abs(b)) / buf.length;
 		return buf.reduce((a, b) => (b > a ? b : a));
 	}
@@ -230,9 +230,7 @@
 				<h2>Loading</h2>
 				<progress max="1" value={loadedPct.current}>loadedPct</progress>
 				<p>
-					{(loadedPct.current * 100).toLocaleString(undefined, {
-						maximumFractionDigits: 0,
-					})}%
+					{(loadedPct.current * 100).toFixed(0)}%
 				</p>
 			</div>
 		{/if}
@@ -301,7 +299,7 @@
 				onmousemove={(evt) => {
 					if (
 						mouseDown &&
-						["CANVAS", "path", "svg"].includes(evt.target.tagName)
+						["CANVAS", "path", "svg"].includes(evt.target!.tagName)
 					)
 						pos = (evt.layerX / width) * duration;
 				}}
