@@ -40,7 +40,7 @@
 
 		const h = canvas.height;
 		const ratio = width / duration;
-		console.log(ratio, duration);
+		// console.log(ratio, duration);
 		let majorEvery: number; // n ticks
 		let minorEvery: number; // seconds
 		if (ratio > 36) {

@@ -288,8 +288,8 @@
 				onmousedown={() => (mouseDown = true)}
 				onmouseup={(evt) => {
 					mouseDown = false;
-					console.log(evt.layerX);
-					if (["CANVAS", "path", "svg"].includes(evt.target.tagName))
+					// console.log(evt.layerX);
+					if (["CANVAS", "path", "svg"].includes(evt.target!.tagName))
 						pos = (evt.layerX / width) * duration;
 					updatePlayerPos();
 				}}
