@@ -25,14 +25,14 @@
 	let uppy: Uppy;
 	onMount(() => {
 		xhook.before(function (request) {
+			let url = new URL(request.url);
+			if (!url.pathname.includes("/v1/"))
+				url.pathname = "/storage/v1" + url.pathname;
 			if (request.url.includes("syllogistic")) {
-				let url = new URL(request.url);
 				url.port = "";
-				if (!url.pathname.includes("/v1/"))
-					url.pathname = "/storage/v1" + url.pathname;
 				url.protocol = "https:";
-				request.url = url.href;
 			}
+			request.url = url.href;
 		});
 		uppy = new Uppy({
 			restrictions: {
