@@ -1,6 +1,6 @@
 export interface AudioPeakOptions {
-  numberOfBuckets?: number;
-  channel?: number;
+	numberOfBuckets?: number;
+	channel?: number;
 }
 
 /**
@@ -13,7 +13,7 @@ export function getPeaks(
 	buffer: AudioBuffer,
 	options: AudioPeakOptions = {}
 ): number[] {
-	const { numberOfBuckets = 1200, channel = 0 } = options;
+	const { numberOfBuckets = 1600, channel = 0 } = options;
 
 	if (channel >= buffer.numberOfChannels) {
 		throw new Error(`Channel ${channel} does not exist in audio buffer`);
