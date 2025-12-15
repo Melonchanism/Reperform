@@ -2,7 +2,7 @@
 	import { supabase } from "$lib/supabase";
 	import {
 		PUBLIC_SUPABASE_ANON_KEY,
-		PUBLIC_SUPABASE_URL,
+		// PUBLIC_SUPABASE_URL,
 	} from "$env/static/public";
 	import { onMount } from "svelte";
 	import Uppy from "@uppy/core";
@@ -13,6 +13,8 @@
 	import "@uppy/dashboard/css/style.min.css";
 
 	const STORAGE_BUCKET = "recordings";
+	// Cloudflare being stupid also security for now
+	const PUBLIC_SUPABASE_URL = "http://100.100.1.99/";
 	const supabaseStorageURL = new URL(
 		"/storage/v1/upload/resumable",
 		PUBLIC_SUPABASE_URL
