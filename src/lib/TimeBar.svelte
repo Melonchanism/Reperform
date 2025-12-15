@@ -4,17 +4,11 @@
 	interface Props {
 		width: number;
 		height: number;
-		// Temp just for testing
-		pos: number;
 		duration: number;
-		regions: {
-			name: string;
-			start: number;
-			end: number;
-		};
+		zones: Zone[];
 	}
 
-	const { width, height = 30, pos, duration, regions }: Props = $props();
+	const { width, height = 30, duration, zones }: Props = $props();
 
 	let canvas: HTMLCanvasElement;
 	let ctx: CanvasRenderingContext2D;
@@ -25,17 +19,15 @@
 	});
 
 	// Redraw whenever inputs change
-	$effect(() => {
-		draw();
-	});
+	$effect(draw);
 
 	function draw() {
 		if (!ctx) return;
 
 		canvas.width = width * devicePixelRatio;
 		canvas.height = height * devicePixelRatio;
+		ctx.scale(devicePixelRatio, devicePixelRatio);
 
-		// Clear
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
 
 		const h = canvas.height;
@@ -66,10 +58,8 @@
 			minorEvery = 10;
 		}
 
-		ctx.strokeStyle = "#ffffff";
-		ctx.fillStyle = "#ffffff";
+		ctx.strokeStyle = ctx.fillStyle = "#ffffff";
 		ctx.lineWidth = 1;
-		ctx.scale(devicePixelRatio, devicePixelRatio);
 
 		for (let t = 0; t <= duration; t += minorEvery) {
 			const x = (t / duration) * width;
@@ -95,16 +85,6 @@
 				ctx.stroke();
 			}
 		}
-
-		// Draw playhead (temp)
-		const px = (pos / duration) * width;
-		ctx.strokeStyle = "red";
-		ctx.lineWidth = 2;
-
-		ctx.beginPath();
-		ctx.moveTo(px, 0);
-		ctx.lineTo(px, h);
-		ctx.stroke();
 	}
 </script>
 

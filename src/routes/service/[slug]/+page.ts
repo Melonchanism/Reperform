@@ -1,5 +1,6 @@
 import { supabase } from "$lib/supabase";
 import type { PageLoad } from "./$types";
+import type { PostgrestSingleResponse } from "@supabase/supabase-js";
 
 export const load: PageLoad = async ({ params }) => {
 	const listRequest = await supabase.storage
@@ -14,10 +15,11 @@ export const load: PageLoad = async ({ params }) => {
 				.getPublicUrl(`${params.slug}/${obj.name}`).data.publicUrl,
 		};
 	});
-	const metadataRequest = await supabase
+	const metadataRequest: PostgrestSingleResponse<RecordItem> = await supabase
 		.from("recordings")
 		.select()
-		.eq("folder", decodeURI(params.slug));
+		.eq("folder", decodeURI(params.slug))
+		.single();
 	if (metadataRequest.error !== null) throw metadataRequest.error;
-	return { details: metadataRequest.data[0], tracks };
+	return { details: metadataRequest.data, tracks };
 };
