@@ -22,7 +22,8 @@
 
 	let dateInput: HTMLInputElement;
 
-	let name = "";
+	let name = $state("");
+	let zoneString = $state("");
 
 	let uppy: Uppy;
 	onMount(() => {
@@ -54,7 +55,7 @@
 					apikey: PUBLIC_SUPABASE_ANON_KEY,
 				},
 				uploadDataDuringCreation: true,
-				chunkSize: 1024 * 1024 * 6,
+				chunkSize: 1024 * 1024 * 20,
 				allowedMetaFields: [
 					"bucketName",
 					"objectName",
@@ -65,11 +66,9 @@
 					console.log("Failed because: " + error);
 				},
 			});
-
-		dateInput.valueAsDate = new Date();
 	});
 
-	async function upload(evt: MouseEvent) {
+	async function upload() {
 		let folder = `${dateInput.value} ${name}`;
 		let files = uppy.getFiles();
 
@@ -109,15 +108,24 @@
 				};
 			});
 
-		uppy.getFiles().forEach((file) => {
-			console.log(file.meta.objectName);
-		});
-
 		if (!append) {
 			const error2 = (
 				await supabase
 					.from("recordings")
 					.insert({ name, date: dateInput.value, folder })
+			).error;
+
+			if (error2) {
+				alert(error2.details);
+				throw error2;
+			}
+		} else {
+			const error2 = (
+				await supabase
+					.from("recordings")
+					.update({ name, date: dateInput.value, folder })
+					.eq("name", name)
+					.eq("date", dateInput.value)
 			).error;
 
 			if (error2) {
@@ -142,6 +150,8 @@
 			<input type="text" bind:value={name} />
 			<p>Date</p>
 			<input type="date" bind:this={dateInput} />
+			<p>Zones</p>
+			<input type="text" bind:value={zoneString} />
 		</div>
 		<div id="dashboard"></div>
 	</div>

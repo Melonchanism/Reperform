@@ -21,14 +21,35 @@
 	// Redraw whenever inputs change
 	$effect(draw);
 
+	function secWidth(x: number) {
+		return (x / duration) * width;
+	}
+
 	function draw() {
 		if (!ctx) return;
 
-		canvas.width = width * devicePixelRatio;
-		canvas.height = height * devicePixelRatio;
-		ctx.scale(devicePixelRatio, devicePixelRatio);
+		const pixelRatio = Math.max(devicePixelRatio, 2);
+		canvas.width = width * pixelRatio;
+		canvas.height = height * pixelRatio;
+		ctx.scale(pixelRatio, pixelRatio);
 
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
+		for (let i = 0; i < zones.length; i++) {
+			const zone = zones[i];
+			ctx.strokeStyle = `hsl(${i * 200}, 10%, 50%)`;
+			ctx.fillStyle = `hsl(${i * 200}, 20%, 20%)`;
+			const start = secWidth(zone.start);
+			const width = secWidth(zone.end - zone.start);
+			ctx.beginPath();
+			ctx.roundRect(start, 1, width, 18, 4);
+			ctx.fill();
+			ctx.stroke();
+
+			ctx.strokeStyle = ctx.fillStyle = "#ffffff";
+			ctx.font = "16px sans-serif";
+			ctx.textAlign = "start";
+			ctx.fillText(zone.name, secWidth(zone.start) + 4, 16, width - 5);
+		}
 
 		const h = canvas.height;
 		const ratio = width / duration;
@@ -58,6 +79,8 @@
 			minorEvery = 10;
 		}
 
+		const hOffset = 20;
+
 		ctx.strokeStyle = ctx.fillStyle = "#ffffff";
 		ctx.lineWidth = 1;
 
@@ -66,8 +89,8 @@
 
 			if (t % (majorEvery * minorEvery) === 0) {
 				ctx.beginPath();
-				ctx.moveTo(x, 0);
-				ctx.lineTo(x, 7);
+				ctx.moveTo(x, 0 + hOffset);
+				ctx.lineTo(x, 7 + hOffset);
 				ctx.stroke();
 
 				ctx.font = "10px sans-serif";
@@ -75,13 +98,13 @@
 				ctx.fillText(
 					`${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`,
 					x,
-					15
+					15 + hOffset
 				);
 			} else {
 				// Minor tick
 				ctx.beginPath();
-				ctx.moveTo(x, 0);
-				ctx.lineTo(x, 3);
+				ctx.moveTo(x, 0 + hOffset);
+				ctx.lineTo(x, 3 + hOffset);
 				ctx.stroke();
 			}
 		}

@@ -9,13 +9,14 @@
 	import { Spring } from "svelte/motion";
 	import TimeBar from "$lib/TimeBar.svelte";
 
+	const timeBarHeight = 40;
+
 	let { data }: PageProps = $props();
 	let masterGainDB = $state(0);
 	let masterPeak: number = $state(0);
 	let tracks: LoadedTrack[] = $state([]);
 	let player: {
 		play: () => void;
-		pause: () => void;
 		togglePlay: () => void;
 		updatePlayerPos: () => void;
 		handleKey: (evt: KeyboardEvent) => void;
@@ -36,12 +37,11 @@
 
 	async function adjustZoom(val: number, layer: number, set = false) {
 		const oldZoom = zoom;
-		if (!set) {
-			zoom *= Math.exp(-val / 370);
-			zoom = +Math.min(4, Math.max(0.1, zoom)).toFixed(3);
-		} else {
-			zoom = val;
-		}
+		if (!set)
+			zoom = +Math.min(4, Math.max(0.1, zoom * Math.exp(-val / 370))).toFixed(
+				3
+			);
+		else zoom = val;
 
 		document.querySelector(".waveforms")!.scrollLeft +=
 			(layer / oldZoom) * zoom - layer;
@@ -71,7 +71,7 @@
 	bind:this={player}
 />
 
-<div class="page">
+<div class="page" style:--timebar-height="{timeBarHeight}px">
 	<div class="header">
 		<h1>{data.details.name}</h1>
 		<h3 style="color: gray">({data.details.date})</h3>
@@ -159,6 +159,7 @@
 				onmousemove={(evt) => {
 					if (
 						mouseDown &&
+						// @ts-ignore
 						["CANVAS", "path", "svg"].includes(evt.target!.tagName)
 					)
 						pos = (evt.layerX / width) * duration;
@@ -167,6 +168,7 @@
 				onmouseup={(evt) => {
 					mouseDown = false;
 					// console.log(evt.layerX);
+					// @ts-ignore
 					if (["CANVAS", "path", "svg"].includes(evt.target!.tagName))
 						pos = (evt.layerX / width) * duration;
 					player.updatePlayerPos();
@@ -177,7 +179,7 @@
 					<div class="progress"></div>
 				</div>
 				<div class="timebar">
-					<TimeBar {width} height={20} {duration} zones={data.details} />
+					<TimeBar {width} height={40} {duration} zones={data.details.zones} />
 				</div>
 				{#each tracks as track}
 					<div class="wavecontainer" transition:fade>
@@ -308,9 +310,16 @@
 				height: 100%;
 				position: absolute;
 				width: 100%;
-				/*background: hsla(0, 0%, 40%, 20%);*/
-				backdrop-filter: saturate(5000%);
 				pointer-events: none;
+				&::after {
+					content: "";
+					position: absolute;
+					backdrop-filter: saturate(5000%);
+					top: var(--timebar-height);
+					left: 0;
+					width: 100%;
+					height: calc(100% - var(--timebar-height));
+				}
 			}
 		}
 
@@ -319,8 +328,7 @@
 			height: 100px;
 		}
 		.timebar {
-			padding-top: 15px;
-			height: 20px;
+			height: 40px;
 		}
 	}
 
