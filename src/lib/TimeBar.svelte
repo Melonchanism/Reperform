@@ -13,19 +13,13 @@
 	let canvas: HTMLCanvasElement;
 	let ctx: CanvasRenderingContext2D;
 
-	onMount(() => {
-		ctx = canvas.getContext("2d")!;
-		draw();
-	});
-
-	// Redraw whenever inputs change
-	$effect(draw);
+	onMount(() => (ctx = canvas.getContext("2d")!));
 
 	function secWidth(x: number) {
 		return (x / duration) * width;
 	}
 
-	function draw() {
+	$effect(() => {
 		if (!ctx) return;
 
 		const pixelRatio = Math.max(devicePixelRatio, 2);
@@ -47,8 +41,7 @@
 
 			ctx.strokeStyle = ctx.fillStyle = "#ffffff";
 			ctx.font = "16px sans-serif";
-			ctx.textAlign = "start";
-			ctx.fillText(zone.name, secWidth(zone.start) + 4, 16, width - 5);
+			ctx.fillText(zone.name, start + 4, 16, width - 5);
 		}
 
 		const h = canvas.height;
@@ -78,11 +71,8 @@
 			majorEvery = 6;
 			minorEvery = 10;
 		}
-
 		const hOffset = 20;
-
 		ctx.strokeStyle = ctx.fillStyle = "#ffffff";
-		ctx.lineWidth = 1;
 
 		for (let t = 0; t <= duration; t += minorEvery) {
 			const x = (t / duration) * width;
@@ -108,7 +98,7 @@
 				ctx.stroke();
 			}
 		}
-	}
+	});
 </script>
 
 <canvas bind:this={canvas} style:height="{height}px" style:width="{width}px"
