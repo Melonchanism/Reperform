@@ -15,12 +15,7 @@
 	let masterGainDB = $state(0);
 	let masterPeak: number = $state(0);
 	let tracks: LoadedTrack[] = $state([]);
-	let player: {
-		play: () => void;
-		togglePlay: () => void;
-		updatePlayerPos: () => void;
-		handleKey: (evt: KeyboardEvent) => void;
-	};
+	let player: Player;
 
 	let playing = $state(false);
 	let suspended = $state(false);
@@ -89,6 +84,7 @@
 		<div class="controls">
 			<button onclick={player.togglePlay}>
 				<img src={playing && !suspended ? "/pause.svg" : "/play.svg"} alt="" />
+				{playing && !suspended ? "Pause" : "Play"}
 			</button>
 			<div>
 				<p>Zoom:</p>

@@ -183,37 +183,41 @@
 	}
 
 	export async function play() {
+		playStart = audioCtx.currentTime - pos;
 		playing = true;
-		if (suspended) {
-			audioCtx.resume();
-			playStart = audioCtx.currentTime - pos;
-		} else {
-			prepare();
-			playStart = audioCtx.currentTime - pos;
+		if (!suspended) {
 			for (const track of tracks) {
 				track.source?.start(0, pos);
 			}
 		}
+		audioCtx.resume();
 		updateLoop(true);
 	}
 
+	export function pause() {
+		audioCtx.suspend();
+	}
+
 	export function stop() {
-		playing = false;
 		for (const track of tracks) {
-			track.source?.stop();
+			if (playing) track.source?.stop();
 			track.source?.disconnect();
 			track.source = undefined;
 		}
+		playing = false;
 		prepare();
 	}
+
 	export function togglePlay() {
-		playing && !suspended ? stop() : play();
+		playing && !suspended ? pause() : play();
 	}
 
 	export function updatePlayerPos() {
-		let originalState = playing;
+		let originalPlay = playing;
+		let originalSuspended = suspended;
 		stop();
-		if (originalState) play();
+		suspended = false;
+		if (originalPlay && !originalSuspended) play();
 	}
 
 	export function handleKey(evt: KeyboardEvent) {
