@@ -5,7 +5,7 @@
 		width: number;
 		height: number;
 		duration: number;
-		zones: Zone[];
+		zones?: Zone[];
 	}
 
 	const { width, height = 30, duration, zones }: Props = $props();
@@ -28,8 +28,8 @@
 		ctx.scale(pixelRatio, pixelRatio);
 
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
-		for (let i = 0; i < zones.length; i++) {
-			const zone = zones[i];
+		for (let i = 0; i < (zones?.length ?? 0); i++) {
+			const zone = zones![i];
 			ctx.strokeStyle = `hsl(${i * 200}, 10%, 50%)`;
 			ctx.fillStyle = `hsl(${i * 200}, 20%, 20%)`;
 			const start = secWidth(zone.start);
