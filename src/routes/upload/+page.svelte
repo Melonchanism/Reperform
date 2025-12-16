@@ -2,7 +2,7 @@
 	import { supabase } from "$lib/supabase";
 	import {
 		PUBLIC_SUPABASE_ANON_KEY,
-		// PUBLIC_SUPABASE_URL,
+		PUBLIC_SUPABASE_UPLOAD_URL,
 	} from "$env/static/public";
 	import { onMount } from "svelte";
 	import Uppy from "@uppy/core";
@@ -14,10 +14,9 @@
 
 	const STORAGE_BUCKET = "recordings";
 	// Cloudflare being stupid also security for now
-	const PUBLIC_SUPABASE_URL = "http://100.100.1.99:8000/";
 	const supabaseStorageURL = new URL(
 		"/storage/v1/upload/resumable",
-		PUBLIC_SUPABASE_URL
+		PUBLIC_SUPABASE_UPLOAD_URL
 	).href;
 
 	let dateInput: HTMLInputElement;
@@ -29,12 +28,11 @@
 	onMount(() => {
 		xhook.before(function (request) {
 			let url = new URL(request.url);
+			let baseURL = new URL(PUBLIC_SUPABASE_UPLOAD_URL);
 			if (!url.pathname.includes("/v1/"))
 				url.pathname = "/storage/v1" + url.pathname;
-			if (request.url.includes("syllogistic")) {
-				url.port = "";
-				url.protocol = "https:";
-			}
+			url.port = baseURL.port;
+			url.protocol = baseURL.protocol;
 			request.url = url.href;
 		});
 		uppy = new Uppy({
