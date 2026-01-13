@@ -2,7 +2,10 @@ import { supabase } from "$lib/supabase";
 import type { PageLoad } from "./$types";
 
 export const load: PageLoad = async () => {
-	const { data, error } = await supabase.from("recordings").select();
+	const { data, error } = await supabase
+		.from("recordings")
+		.select()
+		.order("date", { ascending: false });
 
 	if (error !== null) throw error;
 
