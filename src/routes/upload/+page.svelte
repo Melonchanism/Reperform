@@ -1,9 +1,6 @@
 <script lang="ts">
 	import { supabase } from "$lib/supabase";
-	import {
-		PUBLIC_SUPABASE_ANON_KEY,
-		PUBLIC_SUPABASE_UPLOAD_URL,
-	} from "$env/static/public";
+	import { PUBLIC_SUPABASE_ANON_KEY, PUBLIC_SUPABASE_UPLOAD_URL } from "$env/static/public";
 	import { onMount } from "svelte";
 	import Uppy from "@uppy/core";
 	import Dashboard from "@uppy/dashboard";
@@ -14,23 +11,19 @@
 
 	const STORAGE_BUCKET = "recordings";
 	// Cloudflare being stupid also security for now
-	const supabaseStorageURL = new URL(
-		"/storage/v1/upload/resumable",
-		PUBLIC_SUPABASE_UPLOAD_URL
-	).href;
+	const supabaseStorageURL = new URL("/storage/v1/upload/resumable", PUBLIC_SUPABASE_UPLOAD_URL).href;
 
 	let dateInput: HTMLInputElement;
 
 	let name = $state("");
-	let zoneString = $state("");
+	let zones: Zone[] = $state([]);
 
 	let uppy: Uppy;
 	onMount(() => {
 		xhook.before(function (request) {
 			let url = new URL(request.url);
 			let baseURL = new URL(PUBLIC_SUPABASE_UPLOAD_URL);
-			if (!url.pathname.includes("/v1/"))
-				url.pathname = "/storage/v1" + url.pathname;
+			if (!url.pathname.includes("/v1/")) url.pathname = "/storage/v1" + url.pathname;
 			url.port = baseURL.port;
 			url.protocol = baseURL.protocol;
 			request.url = url.href;
@@ -54,85 +47,84 @@
 				},
 				uploadDataDuringCreation: true,
 				chunkSize: 1024 * 1024 * 20,
-				allowedMetaFields: [
-					"bucketName",
-					"objectName",
-					"contentType",
-					"cacheControl",
-				],
+				allowedMetaFields: ["bucketName", "objectName", "contentType", "cacheControl"],
 				onError: function (error) {
 					console.log("Failed because: " + error);
 				},
 			});
+		const date = new Date();
+		let params = date
+			.toLocaleDateString()
+			.split("/")
+			.map((itm) => itm.padStart(2, "0"));
+		const year = params.pop()!;
+		dateInput.value = params.toSpliced(0, 0, year).join("-");
 	});
 
 	async function upload() {
 		let folder = `${dateInput.value} ${name}`;
 		let files = uppy.getFiles();
 
-		if (files.length == 0) {
-			alert("No files to upload");
+		if (name.replaceAll(" ", "") == "" || dateInput.value == null) {
+			alert("A field was left blank");
 			return;
 		}
 
-		if (name.replaceAll(" ", "") == "") {
-			alert("Name should not be empty");
+		if (!zones.every((itm) => itm.end !== -1 && itm.start !== -1)) {
+			alert("Zones invaid");
 			return;
 		}
 
-		const { data, error } = await supabase
-			.from("recordings")
-			.select()
-			.eq("name", name)
-			.eq("date", dateInput.value);
+		const { data, error } = await supabase.from("recordings").select().eq("name", name).eq("date", dateInput.value);
 
 		let append = false;
 		if (data!.length > 0) {
 			append = true;
-			if (!confirm("append to existing service?")) throw null;
+			if (!confirm("append to existing service?")) return;
+		}
+
+		let error2;
+		if (!append) {
+			error2 = (await supabase.from("recordings").insert({ name, date: dateInput.value, folder, zones })).error;
+		} else {
+			error2 = (
+				await supabase
+					.from("recordings")
+					.update({ name, date: dateInput.value, folder, zones })
+					.eq("name", name)
+					.eq("date", dateInput.value)
+			).error;
+			return;
+		}
+		if (error || error2) {
+			//@ts-ignore
+			alert((error ?? error2).details);
+			return;
+		}
+
+		if (files.length == 0 && !append) {
+			alert("No files to upload");
+			return;
 		}
 
 		if (data)
 			files.forEach((file) => {
-				const supabaseMetadata = {
+				file.meta = {
+					...file.meta,
 					bucketName: STORAGE_BUCKET,
 					objectName: folder ? `${folder}/${file.name}` : file.name,
 					contentType: file.type,
 				};
-
-				file.meta = {
-					...file.meta,
-					...supabaseMetadata,
-				};
 			});
 
-		if (!append) {
-			const error2 = (
-				await supabase
-					.from("recordings")
-					.insert({ name, date: dateInput.value, folder })
-			).error;
-
-			if (error2) {
-				alert(error2.details);
-				throw error2;
-			}
-		} else {
-			const error2 = (
-				await supabase
-					.from("recordings")
-					.update({ name, date: dateInput.value, folder })
-					.eq("name", name)
-					.eq("date", dateInput.value)
-			).error;
-
-			if (error2) {
-				alert(error2.details);
-				throw error2;
-			}
-		}
-
 		uppy.upload();
+	}
+
+	function convertTime(value: String) {
+		let split = value.split(":");
+		if (split.length === 1) return parseInt(split[0]);
+		else if (split.length === 2) return parseInt(split[0]) * 60 + parseInt(split[1]);
+		else return -1;
 	}
 </script>
 
@@ -149,7 +141,36 @@
 			<p>Date</p>
 			<input type="date" bind:this={dateInput} />
 			<p>Zones</p>
-			<input type="text" bind:value={zoneString} />
+			<div>
+				<button onclick={() => zones.push({ name: "", start: -1, end: -1 })}>Add Zone</button>
+				<div class="list nested">
+					{#each zones as zone, i}
+						<div class="zone">
+							<p>{i + 1}</p>
+							<div class="zoneinputs">
+								<input type="text" placeholder="Title" bind:value={zone.name} />
+								<div>
+									<input
+										type="number"
+										placeholder="Start"
+										oninput={(evt) => {
+											zone.start = convertTime((evt.target as HTMLInputElement).value);
+										}}
+									/>
+									<p>-</p>
+									<input
+										type="number"
+										placeholder="End"
+										oninput={(evt) => {
+											zone.end = convertTime((evt.target as HTMLInputElement).value);
+										}}
+									/>
+								</div>
+							</div>
+						</div>
+					{/each}
+				</div>
+			</div>
 		</div>
 		<div id="dashboard"></div>
 	</div>
@@ -183,6 +204,20 @@
 		}
 		input {
 			width: calc(100% - 16px);
+		}
+	}
+
+	.zone {
+		display: grid;
+		grid-template-columns: auto 1fr;
+		* {
+			margin: 4px;
+		}
+		.zoneinputs {
+			div {
+				display: grid;
+				grid-template-columns: 1fr auto 1fr;
+			}
 		}
 	}
 

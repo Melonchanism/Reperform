@@ -35,41 +35,4 @@
 </div>
 
 <style>
-	.page {
-		.list {
-			display: flex;
-			flex-direction: column;
-			gap: 8px;
-			position: relative;
-			margin-bottom: 8px;
-			.list {
-				& > * {
-					background-color: rgb(30, 30, 30);
-				}
-			}
-			& > * {
-				background-color: rgb(24, 24, 24);
-				border: var(--border);
-				overflow: hidden;
-				appearance: button;
-				display: grid;
-				&:has(> img) {
-					grid-template-columns: auto 1fr auto;
-				}
-				&:has(> img):has(:first-child:nth-last-child(2)) {
-					grid-template-columns: 1fr auto;
-				}
-				align-items: center;
-				color: white;
-				text-decoration: none;
-				margin-top: 0;
-				margin-bottom: 0;
-				padding: 0 16px;
-				border-radius: var(--border-radius);
-				& > img {
-					padding-right: 16px;
-				}
-			}
-		}
-	}
 </style>
